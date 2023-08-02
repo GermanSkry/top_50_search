@@ -17,7 +17,7 @@ def read_log_file(file_path):
                 rows.append(row)
     return rows
 
-# Function to records all songs for each country and save in intermediate files
+# Function to calculate all songs for each country and save in intermediate files
 def calculate_all_songs_per_country(filtered_rows):
     songs_per_country = {}
     # Loop through the filtered rows and extract song IDs, user IDs, and the number of streams
@@ -34,7 +34,7 @@ def calculate_all_songs_per_country(filtered_rows):
     # Write intermediate results to disk for each country using pickle serialization
     for country, songs in songs_per_country.items():
         with open(f"all_songs_intermediate_{country}.pkl", 'wb') as file:
-            pickle.dump(list(songs.keys()), file)
+            pickle.dump(songs, file)
 
     return songs_per_country
 
@@ -42,7 +42,7 @@ def calculate_top_50_songs_from_files(all_songs_per_country):
     top_50_songs_per_country = {}
     # Calculate the top 50 songs for each country based on the play count
     for country, songs in all_songs_per_country.items():
-        top_50_songs = heapq.nlargest(50, songs, key=lambda x: songs[x])
+        top_50_songs = heapq.nlargest(50, songs.items(), key=lambda x: x[1])
         top_50_songs_per_country[country] = top_50_songs
 
     return top_50_songs_per_country
@@ -54,7 +54,7 @@ def write_top_50_songs_to_files(top_50_songs_per_country):
         filename = f"country_top50_{country}_{current_date}.txt"
         with open(filename, 'w') as file:
             file.write(f"{country}|")
-            song_data = ','.join(top_50_songs)
+            song_data = ','.join([f"{song}:{count}" for song, count in top_50_songs])
             file.write(song_data)
 
 # Main function to run the entire process
