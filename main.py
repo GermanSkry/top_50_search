@@ -1,21 +1,20 @@
 import os
 import re
-import random
-import string
+import numpy as np
 import heapq
 import pickle
 import datetime
+import time
+import psutil
 
-# Function to read the log file and filter out invalid rows
+# Function to read the log file and filter out invalid rows using a generator
 def read_log_file(file_path):
-    rows = []
     with open(file_path, 'r') as file:
         for line in file:
             row = line.strip()
             # Use regex to check if the row follows the correct format
             if re.match(r'^\d+\s*\|\s*\d+\s*\|\s*[A-Z]{2}$', row):
-                rows.append(row)
-    return rows
+                yield row
 
 # Function to calculate all songs for each country and save in intermediate files
 def calculate_all_songs_per_country(filtered_rows):
@@ -31,10 +30,10 @@ def calculate_all_songs_per_country(filtered_rows):
         # Increment the streams count for the current song in the corresponding country
         songs_per_country[country][song_id] = songs_per_country[country].get(song_id, 0) + 1
 
-    # Write intermediate results to disk for each country using pickle serialization
+    # Write intermediate results to disk for each country using numpy serialization
     for country, songs in songs_per_country.items():
         with open(f"all_songs_intermediate_{country}.pkl", 'wb') as file:
-            pickle.dump(songs, file)
+            pickle.dump(list(songs.keys()), file)
 
     return songs_per_country
 
@@ -42,7 +41,9 @@ def calculate_top_50_songs_from_files(all_songs_per_country):
     top_50_songs_per_country = {}
     # Calculate the top 50 songs for each country based on the play count
     for country, songs in all_songs_per_country.items():
-        top_50_songs = heapq.nlargest(50, songs.items(), key=lambda x: x[1])
+        song_ids, play_counts = np.array(list(songs.keys())), np.array(list(songs.values()))
+        top_indices = np.argsort(play_counts)[-50:]
+        top_50_songs = [(song_ids[i], play_counts[i]) for i in top_indices]
         top_50_songs_per_country[country] = top_50_songs
 
     return top_50_songs_per_country
@@ -59,6 +60,7 @@ def write_top_50_songs_to_files(top_50_songs_per_country):
 
 # Main function to run the entire process
 def main():
+    start_time = time.time()
     current_date = datetime.date.today().strftime("%Y%m%d")
     file_name = f'listen-{current_date}.log'
     log_file_path = os.path.join('C:/Users/skrge/', file_name)
@@ -66,6 +68,18 @@ def main():
     all_songs_per_country = calculate_all_songs_per_country(filtered_rows)
     top_50_songs_per_country = calculate_top_50_songs_from_files(all_songs_per_country)
     write_top_50_songs_to_files(top_50_songs_per_country)
+
+    end_time = time.time()
+
+    # Calculate execution time
+    execution_time = end_time - start_time
+
+    # Get memory usage
+    process = psutil.Process(os.getpid())
+    memory_usage = process.memory_info().rss / 1024 / 1024  # Convert to MB
+
+    print(f"Execution time: {execution_time:.2f} seconds")
+    print(f"Memory usage: {memory_usage:.2f} MB")
 
 if __name__ == "__main__":
     main()
