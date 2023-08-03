@@ -2,19 +2,29 @@ import os
 import re
 import numpy as np
 import heapq
-import pickle
+import json
 import datetime
 import time
 import psutil
 
-# Function to read the log file and filter out invalid rows using a generator
-def read_log_file(file_path):
+# Function to read the log file in chunks and filter out invalid rows using a generator
+def read_log_file(file_path, chunk_size=1024):
     with open(file_path, 'r') as file:
-        for line in file:
-            row = line.strip()
-            # Use regex to check if the row follows the correct format
-            if re.match(r'^\d+\s*\|\s*\d+\s*\|\s*[A-Z]{2}$', row):
-                yield row
+        buffer = ''
+        while True:
+            chunk = file.read(chunk_size)
+            if not chunk:
+                break
+
+            buffer += chunk
+            rows = buffer.split('\n')
+            buffer = rows.pop()
+
+            for row in rows:
+                row = row.strip()
+                # Use regex to check if the row follows the correct format
+                if re.match(r'^\d+\s*\|\s*\d+\s*\|\s*[A-Z]{2}$', row):
+                    yield row
 
 # Function to calculate all songs for each country and save in intermediate files
 def calculate_all_songs_per_country(filtered_rows):
@@ -25,15 +35,15 @@ def calculate_all_songs_per_country(filtered_rows):
 
         # Create a dictionary for each country if it doesn't exist
         if country not in songs_per_country:
-            songs_per_country[country] = {}
+            songs_per_country[country] = []
 
-        # Increment the streams count for the current song in the corresponding country
-        songs_per_country[country][song_id] = songs_per_country[country].get(song_id, 0) + 1
+        # Append the streams count for the current song to the corresponding country's array
+        songs_per_country[country].append(int(song_id))
 
-    # Write intermediate results to disk for each country using numpy serialization
+    # Write intermediate results to disk for each country using JSON serialization
     for country, songs in songs_per_country.items():
-        with open(f"all_songs_intermediate_{country}.pkl", 'wb') as file:
-            pickle.dump(list(songs.keys()), file)
+        with open(f"all_songs_intermediate_{country}.json", 'w') as file:
+            json.dump(songs, file)
 
     return songs_per_country
 
@@ -41,7 +51,7 @@ def calculate_top_50_songs_from_files(all_songs_per_country):
     top_50_songs_per_country = {}
     # Calculate the top 50 songs for each country based on the play count
     for country, songs in all_songs_per_country.items():
-        song_ids, play_counts = np.array(list(songs.keys())), np.array(list(songs.values()))
+        song_ids, play_counts = np.unique(songs, return_counts=True)
         top_indices = np.argsort(play_counts)[-50:]
         top_50_songs = [(song_ids[i], play_counts[i]) for i in top_indices]
         top_50_songs_per_country[country] = top_50_songs
