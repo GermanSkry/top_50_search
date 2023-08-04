@@ -26,7 +26,6 @@ def read_log_file(file_path, chunk_size=1024):
                 if re.match(r'^\d+\s*\|\s*\d+\s*\|\s*[A-Z]{2}$', row):
                     yield row
 
-# Function to calculate all songs for each country and save in intermediate files
 def calculate_all_songs_per_country(filtered_rows):
     songs_per_country = {}
     # Loop through the filtered rows and extract song IDs, user IDs, and the number of streams
@@ -41,24 +40,39 @@ def calculate_all_songs_per_country(filtered_rows):
         songs_per_country[country].append(int(song_id))
 
     # Write intermediate results to disk for each country using JSON serialization
-    for country, songs in songs_per_country.items():
+    countries = list(songs_per_country.keys())  # Create a list with all the countries
+    for country in countries:
+        songs = songs_per_country[country]
         with open(f"all_songs_intermediate_{country}.json", 'w') as file:
             json.dump(songs, file)
 
-    return songs_per_country
+    # Free up memory by deleting the unnecessary variable
+    del songs_per_country
 
-def calculate_top_50_songs_from_files(all_songs_per_country):
-    top_50_songs_per_country = {}
-    # Calculate the top 50 songs for each country based on the play count
-    for country, songs in all_songs_per_country.items():
-        song_ids, play_counts = np.unique(songs, return_counts=True)
-        top_indices = np.argsort(play_counts)[-50:]
-        top_50_songs = [(song_ids[i], play_counts[i]) for i in top_indices]
-        top_50_songs_per_country[country] = top_50_songs
-
-    return top_50_songs_per_country
+    return countries
 
 # Function to write the top 50 songs for each country to separate files
+def calculate_top_50_songs_from_files(countries):
+    top_50_songs_per_country = {}
+    current_date = datetime.date.today().strftime("%Y%m%d")
+
+    for country in countries:
+        intermediate_file_path = f"all_songs_intermediate_{country}.json"
+        
+        if os.path.exists(intermediate_file_path):
+            with open(intermediate_file_path, 'r') as file:
+                songs = json.load(file)
+
+            song_ids, play_counts = np.unique(songs, return_counts=True)
+            top_indices = np.argsort(play_counts)[-50:]
+            top_50_songs = [(song_ids[i], play_counts[i]) for i in top_indices]
+            top_50_songs_per_country[country] = top_50_songs
+        else:
+            # Handle cases where the intermediate file is missing or empty
+            top_50_songs_per_country[country] = []
+
+    return top_50_songs_per_country
+    
 def write_top_50_songs_to_files(top_50_songs_per_country):
     current_date = datetime.date.today().strftime("%Y%m%d")
     for country, top_50_songs in top_50_songs_per_country.items():
@@ -75,8 +89,8 @@ def main():
     file_name = f'listen-{current_date}.log'
     log_file_path = os.path.join('C:/Users/skrge/', file_name)
     filtered_rows = read_log_file(log_file_path)
-    all_songs_per_country = calculate_all_songs_per_country(filtered_rows)
-    top_50_songs_per_country = calculate_top_50_songs_from_files(all_songs_per_country)
+    countries = calculate_all_songs_per_country(filtered_rows)
+    top_50_songs_per_country = calculate_top_50_songs_from_files(countries)
     write_top_50_songs_to_files(top_50_songs_per_country)
 
     end_time = time.time()
