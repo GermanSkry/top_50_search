@@ -87,7 +87,7 @@ def main():
     start_time = time.time()
     current_date = datetime.date.today().strftime("%Y%m%d")
     file_name = f'listen-{current_date}.log'
-    log_file_path = os.path.join('C:/Users/skrge/', file_name)
+    log_file_path = os.path.join('C:/Users/skrge/', file_name) #change 'C:/Users/skrge/' to your directory
     filtered_rows = read_log_file(log_file_path)
     countries = calculate_all_songs_per_country(filtered_rows)
     top_50_songs_per_country = calculate_top_50_songs_from_files(countries)
