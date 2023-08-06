@@ -23,15 +23,3 @@ The script will start processing the log file, and you will see the progress on 
 After the script finishes executing, you will see the execution time and memory usage on the console. The top 50 songs for each country will be saved in the files named country_top50_{country}_{current_date}.txt.
 
 Throughout the algorithm, we used various optimization techniques, such as chunking, using numpy arrays, creating intermediate files and deleting the unnecessary variable, to reduce memory usage and improve the efficiency of the code. These optimizations are crucial when dealing with large datasets to avoid running out of memory and improve overall performance.
-
-
-
-The following Python libraries are used in the algorithm:
-os: This library provides a way to interact with the operating system, allowing the script to handle file paths and operations.
-re: The regular expression library is used for pattern matching in the log file to filter out valid rows.
-numpy (np): Numpy is a powerful library for numerical computing in Python. It is used to efficiently store and manipulate arrays, which helps optimize memory usage.
-heapq: The heapq module provides heap queue algorithms, which are used to find the top 50 songs based on their play counts efficiently.
-json: The json library is used for serialization and deserialization of data. It is used to save and load intermediate results to/from files.
-datetime: The datetime module provides functions to work with dates and times. It is used to get the current date in the required format for file naming.
-time: This module is used to measure the execution time of the algorithm.
-psutil: The psutil library allows the script to monitor system resource usage. It is used to get memory usage information during the execution of the algorithm.
